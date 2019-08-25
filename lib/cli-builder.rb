@@ -63,15 +63,19 @@ module CliBuilder
 
     class Data
       def initialize
+        @arguments = []
       end
 
       def add_scalar_argument(value_name, keyword: nil, required: false)
+        @arguments.push(Argument.new(value_name, keyword, required))
         puts "[JCARSON] - value_name: #{value_name}, keyword: #{keyword}"
       end
 
       def to_regex
       end
     end
+
+    Argument = Struct.new(:value_name, :keyword, :required)
   end
 
   module Input

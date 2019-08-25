@@ -16,7 +16,7 @@ class FoobarTest < Minitest::Test
       # noop
     end
 
-    prompt.register_command(:command4, '<name name> <age>') do
+    prompt.register_command(:command4, '<NAME name> <age>') do
       # noop
     end
 
