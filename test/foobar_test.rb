@@ -12,6 +12,14 @@ class FoobarTest < Minitest::Test
       # noop
     end
 
+    prompt.register_command(:command3, '<name name>') do
+      # noop
+    end
+
+    prompt.register_command(:command4, '<name name> <age>') do
+      # noop
+    end
+
     result = prompt.parse_input('command1')
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal(:command1, result.command)

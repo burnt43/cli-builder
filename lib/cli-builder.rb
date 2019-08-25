@@ -8,18 +8,68 @@ module CliBuilder
       end
 
       def parse
-        return Data.new unless @syntax_string
+        data = Data.new
+
+        return data unless @syntax_string
 
         parse_state = :looking_for_arguments
 
+        string1 = ''
+        string2 = ''
+
         @syntax_string.each_char do |c|
-          puts c
+          puts "(#{parse_state})[#{c}]"
+          case parse_state
+          when :looking_for_arguments
+            if /\s/ =~ c
+              # noop
+            elsif c == '<'
+              parse_state = :parsing_required_argument_string1
+            elsif c == '['
+               # TODO: optional arguments
+            end
+          when :parsing_required_argument_string1
+            if /\w/ =~ c
+              string1.concat(c)
+            elsif /\s/ =~ c
+              parse_state = :parsing_required_argument_string2
+            elsif c == '>'
+              parse_state = :looking_for_arguments
+
+              data.add_scalar_argument(string1, required: true)
+              string1.clear
+              string2.clear
+            else
+              raise 'invalid'
+            end
+          when :parsing_required_argument_string2
+            if /\w/ =~ c
+              string2.concat(c)
+            elsif c == '>'
+              parse_state = :looking_for_arguments
+
+              data.add_scalar_argument(string2, keyword: string1, required: true)
+              string1.clear
+              string2.clear
+            else
+              raise 'invalid'
+            end
+          end
         end
+
+        data
       end
     end
 
     class Data
       def initialize
+      end
+
+      def add_scalar_argument(value_name, keyword: nil, required: false)
+        puts "[JCARSON] - value_name: #{value_name}, keyword: #{keyword}"
+      end
+
+      def to_regex
       end
     end
   end
