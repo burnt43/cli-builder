@@ -18,7 +18,7 @@ module CliBuilder
         string2 = ''
 
         @syntax_string.each_char do |c|
-          puts "(#{parse_state})[#{c}]"
+          # puts "(#{parse_state})[#{c}]"
           case parse_state
           when :looking_for_arguments
             if /\s/ =~ c
@@ -26,7 +26,27 @@ module CliBuilder
             elsif c == '<'
               parse_state = :parsing_required_argument_string1
             elsif c == '['
-               # TODO: optional arguments
+              parse_state = :parsing_optional_argument_string1
+            end
+          when :parsing_optional_argument_string1
+            if /\w/ =~ c
+              string1.concat(c)
+            elsif /\s/ =~ c
+              parse_state = :parsing_optional_argument_string2
+            else
+              raise Error.new("invalid char: #{c}")
+            end
+          when :parsing_optional_argument_string2
+            if /\w/ =~ c
+              string2.concat(c)
+            elsif c == ']'
+              parse_state = :looking_for_arguments
+
+              data.add_scalar_argument(string2.clone, keyword: string1.clone, required: false)
+              string1.clear
+              string2.clear
+            else
+              raise Error.new("invalid char: #{c}")
             end
           when :parsing_required_argument_string1
             if /\w/ =~ c
@@ -36,11 +56,11 @@ module CliBuilder
             elsif c == '>'
               parse_state = :looking_for_arguments
 
-              data.add_scalar_argument(string1, required: true)
+              data.add_scalar_argument(string1.clone, required: true)
               string1.clear
               string2.clear
             else
-              raise 'invalid'
+              raise Error.new("invalid char: #{c}")
             end
           when :parsing_required_argument_string2
             if /\w/ =~ c
@@ -48,11 +68,11 @@ module CliBuilder
             elsif c == '>'
               parse_state = :looking_for_arguments
 
-              data.add_scalar_argument(string2, keyword: string1, required: true)
+              data.add_scalar_argument(string2.clone, keyword: string1.clone, required: true)
               string1.clear
               string2.clear
             else
-              raise 'invalid'
+              raise Error.new("invalid char: #{c}")
             end
           end
         end
@@ -68,14 +88,58 @@ module CliBuilder
 
       def add_scalar_argument(value_name, keyword: nil, required: false)
         @arguments.push(Argument.new(value_name, keyword, required))
-        puts "[JCARSON] - value_name: #{value_name}, keyword: #{keyword}"
       end
 
-      def to_regex
+      def options_from_input(input_string)
+        options = Input::Parse::Options.new
+
+        return options unless input_string
+
+        index = 0
+        expecting_keyword = true
+
+        input_string.split.each do |token|
+          argument = @arguments[index]
+
+          unless argument
+            return Input::Parse::Error.new(2, "unexpected token: \"#{token}\"")
+          end
+
+          if argument.required
+            if expecting_keyword && argument.keyword
+              if token == argument.keyword
+                expecting_keyword = false
+              else
+                return Input::Parse::Error.new(2, "unexpected token: \"#{token}\"")
+              end
+            else
+              options.send("#{argument.value_name}=", token)
+              index += 1
+              expecting_keyword = true
+            end
+          else
+            if expecting_keyword
+              if argument.keyword != token
+                index +=1
+                expecting_keyword = true
+                redo
+              else
+                expecting_keyword = false
+              end
+            else
+              options.send("#{argument.value_name}=", token)
+              index += 1
+              expecting_keyword = true
+            end
+          end
+        end
+
+        options
       end
     end
 
     Argument = Struct.new(:value_name, :keyword, :required)
+    Error = Class.new(StandardError)
   end
 
   module Input
@@ -88,7 +152,7 @@ module CliBuilder
     end
   end
 
-  CommandData = Struct.new(:syntax_string, :callback)
+  CommandData = Struct.new(:syntax_parse_data, :callback)
 
   class Prompt
     def initialize(
@@ -101,8 +165,8 @@ module CliBuilder
     end
 
     def register_command(command_name, syntax_string = nil, &block)
-      CliBuilder::Syntax::Parser.new(syntax_string).parse
-      @commands[command_name.to_sym] = CommandData.new(syntax_string, block)
+      syntax_parse_data = CliBuilder::Syntax::Parser.new(syntax_string).parse
+      @commands[command_name.to_sym] = CommandData.new(syntax_parse_data, block)
     end
 
     def parse_input(input_string)
@@ -112,7 +176,6 @@ module CliBuilder
 
       potential_command = match_data.captures[0].to_sym
       potential_options = match_data.captures[2]
-      puts "potential_options: #{potential_options}"
 
       command_data = @commands[potential_command]
 
@@ -120,9 +183,22 @@ module CliBuilder
         return Input::Parse::Error.new(1, "unknown command: \"#{potential_command}\"")
       end
 
-      if command_data.syntax_string
+      if command_data.syntax_parse_data
+        result = command_data.syntax_parse_data.options_from_input(potential_options)
+
+        if result.is_a?(Input::Parse::Error)
+          return result
+        else
+          Input::Parse::Result.new(
+            potential_command,
+            result
+          )
+        end
       else
-        Input::Parse::Result.new(potential_command, Input::Parse::Options.new)
+        Input::Parse::Result.new(
+          potential_command,
+          Input::Parse::Options.new
+        )
       end
     end
 
