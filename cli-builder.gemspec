@@ -8,4 +8,5 @@ Gem::Specification.new do |s|
   s.homepage    = "http://tmpurl.com"
   s.files       = ['lib/cli-builder.rb']
   s.license     = 'MIT'
+  s.add_runtime_dependency 'hashie'
 end
