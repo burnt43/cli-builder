@@ -102,7 +102,7 @@ module CliBuilder
           argument = @arguments[index]
 
           unless argument
-            return Input::Parse::Error.new(2, "unexpected token: \"#{token}\"")
+            return Input::Parse::Error.new(:unexpected_token, "\"#{token}\"")
           end
 
           if argument.required
@@ -110,7 +110,7 @@ module CliBuilder
               if token == argument.keyword
                 expecting_keyword = false
               else
-                return Input::Parse::Error.new(2, "unexpected token: \"#{token}\"")
+                return Input::Parse::Error.new(:unexpected_token, "\"#{token}\"")
               end
             else
               options.send("#{argument.value_name}=", token)
@@ -147,7 +147,23 @@ module CliBuilder
       Options = Class.new(Hashie::Mash)
       Result = Struct.new(:command, :options)
       Error  = Struct.new(:type, :message) do
-        # 1 UNKNOWN_COMMAND
+        NAMES = Set.new(%i[
+          unknown_command
+          unexpected_token
+        ])
+
+        def method_missing(method_name, *args, &block)
+          if (match_data = /\A(\w+)\?\z/.match(method_name))
+            error_name = match_data.captures[0].to_sym
+            if NAMES.member?(error_name)
+              type == error_name
+            else
+              super
+            end
+          else
+            super
+          end
+        end
       end
     end
   end
@@ -156,7 +172,7 @@ module CliBuilder
 
   class Prompt
     def initialize(
-      prompt_string,
+      prompt_string: 'prompt >',
       exit_string: 'exit'
     )
       @prompt_string = prompt_string
@@ -180,7 +196,7 @@ module CliBuilder
       command_data = @commands[potential_command]
 
       unless command_data
-        return Input::Parse::Error.new(1, "unknown command: \"#{potential_command}\"")
+        return Input::Parse::Error.new(:unknown_command, "\"#{potential_command}\"")
       end
 
       if command_data.syntax_parse_data
