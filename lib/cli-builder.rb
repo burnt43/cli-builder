@@ -134,6 +134,12 @@ module CliBuilder
           end
         end
 
+        missing_required_arguments = @arguments[index..-1]&.select(&:required) || []
+
+        unless missing_required_arguments.empty?
+          return Input::Parse::Error.new(:missing_arguments, 'FOOBAR')
+        end
+
         options
       end
     end
@@ -148,8 +154,9 @@ module CliBuilder
       Result = Struct.new(:command, :options)
       Error  = Struct.new(:type, :message) do
         NAMES = Set.new(%i[
-          unknown_command
+          missing_arguments
           unexpected_token
+          unknown_command
         ])
 
         def method_missing(method_name, *args, &block)
@@ -191,7 +198,7 @@ module CliBuilder
       return unless match_data
 
       potential_command = match_data.captures[0].to_sym
-      potential_options = match_data.captures[2]
+      potential_options = match_data.captures[2] || ''
 
       command_data = @commands[potential_command]
 
