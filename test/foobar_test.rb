@@ -47,6 +47,53 @@ class FoobarTest < Minitest::Test
     assert_equal('blow', result.token)
   end
 
+  def test_parse_input_with_1_optional_option
+    prompt = CliBuilder::Prompt.new
+
+    prompt.register_command(:command, '[NAME name]') do
+    end
+
+    result = prompt.parse_input('command')
+    refute(result.error?)
+    assert_instance_of(CliBuilder::Input::Parse::Result, result)
+    assert_equal(:command, result.command)
+    assert_empty(result.options)
+
+    result = prompt.parse_input('command joe')
+    assert(result.error?)
+    assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
+    assert_equal('joe', result.token)
+
+    result = prompt.parse_input('command NAME joe')
+    refute(result.error?)
+    assert_instance_of(CliBuilder::Input::Parse::Result, result)
+    assert_equal(:command, result.command)
+    assert_equal('joe', result.options.name)
+
+    result = prompt.parse_input('command joe blow')
+    assert(result.error?)
+    assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
+    assert_equal('joe', result.token)
+
+    result = prompt.parse_input('command NAME joe blow')
+    assert(result.error?)
+    assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
+    assert_equal('blow', result.token)
+  end
+
+  def test_parse_input_with_upcase_value_name
+    prompt = CliBuilder::Prompt.new
+
+    prompt.register_command(:command, '[NAME NaMe]') do
+    end
+
+    result = prompt.parse_input('command NAME joe')
+    refute(result.error?)
+    assert_instance_of(CliBuilder::Input::Parse::Result, result)
+    assert_equal(:command, result.command)
+    assert_equal('joe', result.options.name)
+  end
+
   def test_foobar
 #     prompt = CliBuilder::Prompt.new
 # 

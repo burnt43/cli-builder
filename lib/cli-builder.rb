@@ -125,7 +125,7 @@ module CliBuilder
                 return Input::Parse::Errors::UnexpectedToken.new(token)
               end
             else
-              options.send("#{argument.value_name}=", token)
+              options.send("#{argument.value_name.downcase}=", token)
               index += 1
               expecting_keyword = true
             end
@@ -139,7 +139,7 @@ module CliBuilder
                 expecting_keyword = false
               end
             else
-              options.send("#{argument.value_name}=", token)
+              options.send("#{argument.value_name.downcase}=", token)
               index += 1
               expecting_keyword = true
             end
