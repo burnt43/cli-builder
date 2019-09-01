@@ -40,6 +40,11 @@ class FoobarTest < Minitest::Test
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::MissingArguments, result)
     assert_equal('<name>', result.arguments[0].to_s)
+
+    result = prompt.parse_input('command joe blow')
+    assert(result.error?)
+    assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
+    assert_equal('blow', result.token)
   end
 
   def test_foobar
