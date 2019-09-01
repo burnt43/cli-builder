@@ -102,7 +102,7 @@ module CliBuilder
           argument = @arguments[index]
 
           unless argument
-            return Input::Parse::Error.new(:unexpected_token, "\"#{token}\"")
+            return Input::Parse::Errors::UnexpectedToken.new(token)
           end
 
           if argument.required
@@ -110,7 +110,7 @@ module CliBuilder
               if token == argument.keyword
                 expecting_keyword = false
               else
-                return Input::Parse::Error.new(:unexpected_token, "\"#{token}\"")
+                return Input::Parse::Errors::UnexpectedToken.new(token)
               end
             else
               options.send("#{argument.value_name}=", token)
@@ -137,7 +137,7 @@ module CliBuilder
         missing_required_arguments = @arguments[index..-1]&.select(&:required) || []
 
         unless missing_required_arguments.empty?
-          return Input::Parse::Error.new(:missing_arguments, 'FOOBAR')
+          return Input::Parse::Errors::MissingArguments.new(missing_required_arguments)
         end
 
         options
@@ -146,31 +146,18 @@ module CliBuilder
 
     Argument = Struct.new(:value_name, :keyword, :required)
     Error = Class.new(StandardError)
-  end
+  end # Syntax
 
   module Input
     module Parse
       Options = Class.new(Hashie::Mash)
-      Result = Struct.new(:command, :options)
-      Error  = Struct.new(:type, :message) do
-        NAMES = Set.new(%i[
-          missing_arguments
-          unexpected_token
-          unknown_command
-        ])
 
-        def method_missing(method_name, *args, &block)
-          if (match_data = /\A(\w+)\?\z/.match(method_name))
-            error_name = match_data.captures[0].to_sym
-            if NAMES.member?(error_name)
-              type == error_name
-            else
-              super
-            end
-          else
-            super
-          end
-        end
+      Result = Struct.new(:command, :options)
+
+      module Errors
+        MissingArguments = Struct.new(:arguments)
+        UnexpectedToken = Struct.new(:token)
+        UnknownCommand = Struct.new(:command)
       end
     end
   end
@@ -203,19 +190,19 @@ module CliBuilder
       command_data = @commands[potential_command]
 
       unless command_data
-        return Input::Parse::Error.new(:unknown_command, "\"#{potential_command}\"")
+        return Input::Parse::Errors::UnknownCommand.new(potential_command)
       end
 
       if command_data.syntax_parse_data
         result = command_data.syntax_parse_data.options_from_input(potential_options)
 
-        if result.is_a?(Input::Parse::Error)
-          return result
-        else
+        if result.is_a?(Input::Parse::Options)
           Input::Parse::Result.new(
             potential_command,
             result
           )
+        else
+          return result
         end
       else
         Input::Parse::Result.new(

@@ -13,12 +13,10 @@ class FoobarTest < Minitest::Test
     assert_empty(result.options)
 
     result = prompt.parse_input('com1')
-    assert_instance_of(CliBuilder::Input::Parse::Error, result)
-    assert(result.unknown_command?)
+    assert_instance_of(CliBuilder::Input::Parse::Errors::UnknownCommand, result)
 
     result = prompt.parse_input('command1 extra_input')
-    assert_instance_of(CliBuilder::Input::Parse::Error, result)
-    assert(result.unexpected_token?)
+    assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
   end
 
   def test_parse_input_with_1_required_option
@@ -33,7 +31,7 @@ class FoobarTest < Minitest::Test
     assert_equal('joe', result.options.name)
 
     result = prompt.parse_input('command')
-    assert_instance_of(CliBuilder::Input::Parse::Error, result)
+    assert_instance_of(CliBuilder::Input::Parse::Errors::MissingArguments, result)
   end
 
   def test_foobar
