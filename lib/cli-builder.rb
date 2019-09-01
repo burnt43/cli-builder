@@ -1,6 +1,18 @@
 require 'hashie'
 
 module CliBuilder
+  module Success
+    def error?
+      false
+    end
+  end
+
+  module Error
+    def error?
+      true
+    end
+  end
+
   module Syntax
     class Parser
       def initialize(syntax_string)
@@ -165,12 +177,22 @@ module CliBuilder
     module Parse
       Options = Class.new(Hashie::Mash)
 
-      Result = Struct.new(:command, :options)
+      Result = Struct.new(:command, :options) do
+        include CliBuilder::Success
+      end
 
       module Errors
-        MissingArguments = Struct.new(:arguments)
-        UnexpectedToken = Struct.new(:token)
-        UnknownCommand = Struct.new(:command)
+        MissingArguments = Struct.new(:arguments) do
+          include CliBuilder::Error
+        end
+
+        UnexpectedToken = Struct.new(:token) do
+          include CliBuilder::Error
+        end
+
+        UnknownCommand = Struct.new(:command) do
+          include CliBuilder::Error
+        end
       end
     end
   end
@@ -209,13 +231,13 @@ module CliBuilder
       if command_data.syntax_parse_data
         result = command_data.syntax_parse_data.options_from_input(potential_options)
 
-        if result.is_a?(Input::Parse::Options)
+        if result.error?
+          return result
+        else
           Input::Parse::Result.new(
             potential_command,
             result
           )
-        else
-          return result
         end
       else
         Input::Parse::Result.new(
