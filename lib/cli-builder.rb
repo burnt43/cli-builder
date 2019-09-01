@@ -144,7 +144,20 @@ module CliBuilder
       end
     end
 
-    Argument = Struct.new(:value_name, :keyword, :required)
+    Argument = Struct.new(:value_name, :keyword, :required) do
+      def to_s
+        result = StringIO.new
+        result.print(required ? '<' : '[')
+        if keyword
+          result.print(keyword) 
+          result.print(' ')
+        end
+        result.print value_name
+        result.print(required ? '>' : ']')
+
+        result.string
+      end
+    end
     Error = Class.new(StandardError)
   end # Syntax
 
