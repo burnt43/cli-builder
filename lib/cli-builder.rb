@@ -207,11 +207,16 @@ module CliBuilder
       @prompt_string = prompt_string
       @exit_string = exit_string
       @commands = {}
+      @error_handler = lambda { |error| puts "an error occurred: #{error}" }
     end
 
     def register_command(command_name, syntax_string = nil, &block)
       syntax_parse_data = CliBuilder::Syntax::Parser.new(syntax_string).parse
-      @commands[command_name.to_sym] = CommandData.new(syntax_parse_data, block)
+      @commands[command_name.to_sym] = CommandData.new(syntax_parse_data, (lambda &block))
+    end
+
+    def register_error_handler(&block)
+      @error_handler = block
     end
 
     def parse_input(input_string)
@@ -247,19 +252,27 @@ module CliBuilder
       end
     end
 
-#     def run
-#       loop do
-#         print "#{@prompt_string} "
-#         user_input = gets.chomp
-# 
-#         if user_input == @exit_string
-#           break
-#         elsif (block = @commands[user_input])
-#           block.call
-#         else
-#           puts "unknown command \"#{user_input}\""
-#         end
-#       end
-#     end
+    def run
+      loop do
+        print "#{@prompt_string} "
+        user_input = gets.chomp
+
+        if user_input == @exit_string
+          break
+        else
+          parsed_input = parse_input(user_input)
+
+          if parsed_input.error?
+            @error_handler.call(parsed_input)
+          else
+            if (command_data = @commands[parsed_input.command])
+              command_data.callback.call(parsed_input)
+            else
+              # noop?
+            end
+          end
+        end
+      end
+    end
   end
 end
