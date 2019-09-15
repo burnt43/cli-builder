@@ -193,6 +193,10 @@ module CliBuilder
         UnknownCommand = Struct.new(:command) do
           include CliBuilder::Error
         end
+        
+        BadInput = Struct.new(:input) do
+          include CliBuilder::Error
+        end
       end
     end
   end
@@ -220,9 +224,9 @@ module CliBuilder
     end
 
     def parse_input(input_string)
-      match_data = /\A(\w+)( (.*))?\z/.match(input_string)
+      match_data = /\A(\S+)( (.*))?\z/.match(input_string)
 
-      return unless match_data
+      return Input::Parse::Errors::BadInput.new(input_string) unless match_data
 
       potential_command = match_data.captures[0].to_sym
       potential_options = match_data.captures[2] || ''

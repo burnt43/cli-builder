@@ -227,4 +227,17 @@ class CliBuilderTest < Minitest::Test
       prompt.register_command(:command, 'name <age> [JOB job1 job2]')
     end
   end
+
+  def test_command_with_dashes
+    prompt = CliBuilder::Prompt.new
+
+    prompt.register_command(:'list-foos') do
+    end
+
+    result = prompt.parse_input('list-foos')
+    refute_nil(result)
+    refute(result.error?)
+    assert_instance_of(CliBuilder::Input::Parse::Result, result)
+    assert_empty(result.options)
+  end
 end
