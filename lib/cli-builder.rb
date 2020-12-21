@@ -278,5 +278,16 @@ module CliBuilder
         end
       end
     end
+
+    # I/O Delegation Methods
+    %i[
+      puts
+      print
+      printf
+    ].each do |method_name|
+      define_method method_name do |*args|
+        send(method_name, *args)
+      end
+    end
   end
 end
