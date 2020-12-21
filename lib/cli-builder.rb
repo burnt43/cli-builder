@@ -286,7 +286,7 @@ module CliBuilder
       printf
     ].each do |method_name|
       define_method method_name do |*args|
-        send(method_name, *args)
+        STDOUT.send(method_name, *args)
       end
     end
   end
