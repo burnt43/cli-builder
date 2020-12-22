@@ -206,7 +206,8 @@ module CliBuilder
   class Prompt
     def initialize(
       prompt_string: 'prompt >',
-      exit_string: 'exit'
+      exit_string: 'exit',
+      greeting_string: nil
     )
       @prompt_string = prompt_string
       @exit_string = exit_string
@@ -226,6 +227,10 @@ module CliBuilder
     end
 
     def run
+      if greeting_string
+        puts greeting_string
+      end
+
       loop do
         break if @exit_flag
 
