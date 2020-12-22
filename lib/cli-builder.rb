@@ -211,6 +211,7 @@ module CliBuilder
     )
       @prompt_string = prompt_string
       @exit_string = exit_string
+      @greeting_string = greeting_string
       @commands = {}
       @error_handler = lambda { |error| puts "an error occurred: #{error}" }
       @exit_flag = false
@@ -227,8 +228,8 @@ module CliBuilder
     end
 
     def run
-      if greeting_string
-        puts greeting_string
+      if @greeting_string
+        puts @greeting_string
       end
 
       loop do
