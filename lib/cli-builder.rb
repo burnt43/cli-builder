@@ -212,6 +212,8 @@ module CliBuilder
       @exit_string = exit_string
       @commands = {}
       @error_handler = lambda { |error| puts "an error occurred: #{error}" }
+      @exit_flag = false
+      @tab_space = '..'
     end
 
     def register_command(command_name, syntax_string = nil, &block)
@@ -222,6 +224,66 @@ module CliBuilder
     def register_error_handler(&block)
       @error_handler = block
     end
+
+    def run
+      loop do
+        break if @exit_flag
+
+        print "#{@prompt_string} "
+        user_input = gets.chomp
+
+        if user_input == @exit_string
+          exit_prompt!
+        else
+          parsed_input = parse_input(user_input)
+
+          if parsed_input.error?
+            @error_handler.call(parsed_input)
+          else
+            if (command_data = @commands[parsed_input.command])
+              command_data.callback.call(parsed_input)
+            else
+              # noop?
+            end
+          end
+        end
+      end
+    end
+
+    def yes_no_prompt(message=nil, &block)
+      print "#{@tab_space}#{message}(Y/n) > "
+      user_input = gets.chomp
+
+      if user_input == 'Y' || user_input == 'y'
+        block.call(true)
+      else
+        block.call(false)
+      end
+    end
+
+    def value_prompt(message=nil, &block)
+      print "#{@tab_space}#{message} > "
+      user_input = gets.chomp
+
+      block.call(user_input)
+    end
+
+    def exit_prompt!
+      @exit_flag = true
+    end
+
+    # I/O Delegation Methods
+    %i[
+      puts
+      print
+      printf
+    ].each do |method_name|
+      define_method method_name do |*args|
+        STDOUT.send(method_name, *args)
+      end
+    end
+
+    private
 
     def parse_input(input_string)
       match_data = /\A(\S+)( (.*))?\z/.match(input_string)
@@ -256,38 +318,5 @@ module CliBuilder
       end
     end
 
-    def run
-      loop do
-        print "#{@prompt_string} "
-        user_input = gets.chomp
-
-        if user_input == @exit_string
-          break
-        else
-          parsed_input = parse_input(user_input)
-
-          if parsed_input.error?
-            @error_handler.call(parsed_input)
-          else
-            if (command_data = @commands[parsed_input.command])
-              command_data.callback.call(parsed_input)
-            else
-              # noop?
-            end
-          end
-        end
-      end
-    end
-
-    # I/O Delegation Methods
-    %i[
-      puts
-      print
-      printf
-    ].each do |method_name|
-      define_method method_name do |*args|
-        STDOUT.send(method_name, *args)
-      end
-    end
   end
 end

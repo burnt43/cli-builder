@@ -7,18 +7,18 @@ class CliBuilderTest < Minitest::Test
     prompt.register_command(:command1) do
     end
 
-    result = prompt.parse_input('command1')
+    result = prompt.send(:parse_input, 'command1')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal(:command1, result.command)
     assert_empty(result.options)
 
-    result = prompt.parse_input('com1')
+    result = prompt.send(:parse_input, 'com1')
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::UnknownCommand, result)
     assert_equal(:com1, result.command)
 
-    result = prompt.parse_input('command1 extra_input')
+    result = prompt.send(:parse_input, 'command1 extra_input')
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
     assert_equal('extra_input', result.token)
@@ -30,18 +30,18 @@ class CliBuilderTest < Minitest::Test
     prompt.register_command(:command, '<name>') do
     end
 
-    result = prompt.parse_input('command joe')
+    result = prompt.send(:parse_input, 'command joe')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal(:command, result.command)
     assert_equal('joe', result.options.name)
 
-    result = prompt.parse_input('command')
+    result = prompt.send(:parse_input, 'command')
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::MissingArguments, result)
     assert_equal('<name>', result.arguments[0].to_s)
 
-    result = prompt.parse_input('command joe blow')
+    result = prompt.send(:parse_input, 'command joe blow')
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
     assert_equal('blow', result.token)
@@ -53,29 +53,29 @@ class CliBuilderTest < Minitest::Test
     prompt.register_command(:command, '[NAME name]') do
     end
 
-    result = prompt.parse_input('command')
+    result = prompt.send(:parse_input, 'command')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal(:command, result.command)
     assert_empty(result.options)
 
-    result = prompt.parse_input('command joe')
+    result = prompt.send(:parse_input, 'command joe')
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
     assert_equal('joe', result.token)
 
-    result = prompt.parse_input('command NAME joe')
+    result = prompt.send(:parse_input, 'command NAME joe')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal(:command, result.command)
     assert_equal('joe', result.options.name)
 
-    result = prompt.parse_input('command joe blow')
+    result = prompt.send(:parse_input, 'command joe blow')
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
     assert_equal('joe', result.token)
 
-    result = prompt.parse_input('command NAME joe blow')
+    result = prompt.send(:parse_input, 'command NAME joe blow')
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
     assert_equal('blow', result.token)
@@ -87,34 +87,34 @@ class CliBuilderTest < Minitest::Test
     prompt.register_command(:command, '[FOO1 foo1] <foo2>') do
     end
 
-    result = prompt.parse_input('command FOO1 apple banana')
+    result = prompt.send(:parse_input, 'command FOO1 apple banana')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal(:command, result.command)
     assert_equal('apple', result.options.foo1)
     assert_equal('banana', result.options.foo2)
 
-    result = prompt.parse_input('command FOO2 apple banana')
+    result = prompt.send(:parse_input, 'command FOO2 apple banana')
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
     assert_equal('apple', result.token)
 
-    result = prompt.parse_input('command FOO1 apple')
+    result = prompt.send(:parse_input, 'command FOO1 apple')
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::MissingArguments, result)
     assert_equal('<foo2>', result.arguments[0].to_s)
 
-    result = prompt.parse_input('command FOO1 apple banana carrot')
+    result = prompt.send(:parse_input, 'command FOO1 apple banana carrot')
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
     assert_equal('carrot', result.token)
 
-    result = prompt.parse_input('command banana FOO1 apple')
+    result = prompt.send(:parse_input, 'command banana FOO1 apple')
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::UnexpectedToken, result)
     assert_equal('FOO1', result.token)
 
-    result = prompt.parse_input('command1 FOO1 apple banana')
+    result = prompt.send(:parse_input, 'command1 FOO1 apple banana')
     assert(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Errors::UnknownCommand, result)
     assert_equal(:command1, result.command)
@@ -127,14 +127,14 @@ class CliBuilderTest < Minitest::Test
     end
 
     # 0 0 0
-    result = prompt.parse_input('command apple FOO4 banana')
+    result = prompt.send(:parse_input, 'command apple FOO4 banana')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal('apple', result.options.foo1)
     assert_equal('banana', result.options.foo4)
 
     # 0 0 1
-    result = prompt.parse_input('command apple FOO4 banana FOO5 carrot')
+    result = prompt.send(:parse_input, 'command apple FOO4 banana FOO5 carrot')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal('apple', result.options.foo1)
@@ -142,7 +142,7 @@ class CliBuilderTest < Minitest::Test
     assert_equal('carrot', result.options.foo5)
 
     # 0 1 0
-    result = prompt.parse_input('command apple FOO3 banana FOO4 carrot')
+    result = prompt.send(:parse_input, 'command apple FOO3 banana FOO4 carrot')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal('apple', result.options.foo1)
@@ -150,7 +150,7 @@ class CliBuilderTest < Minitest::Test
     assert_equal('carrot', result.options.foo4)
 
     # 0 1 1
-    result = prompt.parse_input('command apple FOO3 banana FOO4 carrot FOO5 dill_pickle')
+    result = prompt.send(:parse_input, 'command apple FOO3 banana FOO4 carrot FOO5 dill_pickle')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal('apple', result.options.foo1)
@@ -159,7 +159,7 @@ class CliBuilderTest < Minitest::Test
     assert_equal('dill_pickle', result.options.foo5)
 
     # 1 0 0
-    result = prompt.parse_input('command apple FOO2 banana FOO4 carrot')
+    result = prompt.send(:parse_input, 'command apple FOO2 banana FOO4 carrot')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal('apple', result.options.foo1)
@@ -167,7 +167,7 @@ class CliBuilderTest < Minitest::Test
     assert_equal('carrot', result.options.foo4)
 
     # 1 0 1
-    result = prompt.parse_input('command apple FOO2 banana FOO4 carrot FOO5 dill_pickle')
+    result = prompt.send(:parse_input, 'command apple FOO2 banana FOO4 carrot FOO5 dill_pickle')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal('apple', result.options.foo1)
@@ -176,7 +176,7 @@ class CliBuilderTest < Minitest::Test
     assert_equal('dill_pickle', result.options.foo5)
 
     # 1 1 0
-    result = prompt.parse_input('command apple FOO2 banana FOO3 carrot FOO4 dill_pickle')
+    result = prompt.send(:parse_input, 'command apple FOO2 banana FOO3 carrot FOO4 dill_pickle')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal('apple', result.options.foo1)
@@ -185,7 +185,7 @@ class CliBuilderTest < Minitest::Test
     assert_equal('dill_pickle', result.options.foo4)
 
     # 1 1 1
-    result = prompt.parse_input('command apple FOO2 banana FOO3 carrot FOO4 dill_pickle FOO5 edelweiss')
+    result = prompt.send(:parse_input, 'command apple FOO2 banana FOO3 carrot FOO4 dill_pickle FOO5 edelweiss')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal('apple', result.options.foo1)
@@ -201,7 +201,7 @@ class CliBuilderTest < Minitest::Test
     prompt.register_command(:command, '[NAME NaMe]') do
     end
 
-    result = prompt.parse_input('command NAME joe')
+    result = prompt.send(:parse_input, 'command NAME joe')
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_equal(:command, result.command)
@@ -234,7 +234,7 @@ class CliBuilderTest < Minitest::Test
     prompt.register_command(:'list-foos') do
     end
 
-    result = prompt.parse_input('list-foos')
+    result = prompt.send(:parse_input, 'list-foos')
     refute_nil(result)
     refute(result.error?)
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
