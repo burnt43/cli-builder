@@ -294,7 +294,7 @@ module CliBuilder
     end
 
     def register_error_handler(&block)
-      @error_handler = block
+      @error_handler = (lambda &block)
     end
 
     def register_help_handler(&block)
