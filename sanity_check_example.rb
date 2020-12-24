@@ -6,7 +6,7 @@ prompt.register_command(:command1) do |result|
   puts result.to_s
 end
 
-prompt.register_command(:command2, '[FOO foo]') do |result|
+prompt.register_command(:command2, '[FOO_BAR foo]') do |result|
   puts "foo: #{result.options&.foo}"
 end
 
@@ -24,6 +24,17 @@ end
 
 prompt.register_command(:command4) do |result|
   prompt.exit_prompt!
+end
+
+prompt.register_command(
+  :command5,
+  '<foo> <BAR bar>',
+  command_help: 'test',
+  argument_help: {
+    foo: 'do the foo',
+    bar: 'do the bar'
+  }
+) do |result|
 end
 
 prompt.run

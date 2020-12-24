@@ -94,6 +94,8 @@ module CliBuilder
     end
 
     class Data
+      attr_reader :arguments
+
       def initialize
         @arguments = []
       end
@@ -201,30 +203,102 @@ module CliBuilder
     end
   end
 
-  CommandData = Struct.new(:syntax_parse_data, :callback)
+  class CommandData
+    attr_reader :syntax_parse_data
+    attr_reader :help_data
+    attr_reader :callback
+
+    def initialize(syntax_parse_data, help_data, callback)
+      @syntax_parse_data = syntax_parse_data
+      @help_data = help_data
+      @callback = callback
+    end
+
+    # instance methods
+    def help_text
+      help_data.command_help_text
+    end
+
+    def arguments
+      syntax_parse_data.arguments
+    end
+
+    def argument_string
+      arguments.each(&:to_s).join(' ')
+    end
+
+    def argument_help_text_lookup(argument)
+      help_data.argument_help_text_lookup(argument)
+    end
+
+    class HelpData
+      attr_reader :command_help_text
+
+      def initialize(command_help_text, argument_help_map)
+        @command_help_text = command_help_text
+        @argument_help_map = argument_help_map
+      end
+
+      def argument_help_text_lookup(argument)
+        return unless @argument_help_map
+
+        lookup_key =
+          if argument.is_a?(CliBuilder::Syntax::Argument)
+            argument.value_name.to_sym
+          else
+            argument.to_sym
+          end
+
+        @argument_help_map[lookup_key]
+      end
+    end # HelpData
+  end # CommandData
 
   class Prompt
     def initialize(
       prompt_string: 'prompt >',
       exit_string: 'exit',
+      help_string: 'help',
       greeting_string: nil
     )
       @prompt_string = prompt_string
       @exit_string = exit_string
+      @help_string = help_string
       @greeting_string = greeting_string
+
       @commands = {}
-      @error_handler = lambda { |error| puts "an error occurred: #{error}" }
+
+      @error_handler = ->(error) {
+        puts "an error occurred: #{error}"
+      }
+      @help_handler = ->(command_help_map) {
+        tab_space = '  '
+        command_help_map.each do |command_name, command_help_data|
+          printf("%-15s %-30s %s\n", command_name, command_help_data[:argument_string], command_help_data[:help_text])
+          command_help_data[:arguments].each do |argument_name, argument_help_data|
+            printf("#{tab_space}%-15s %s\n", argument_name, argument_help_data[:help_text])
+          end
+        end
+      }
+
       @exit_flag = false
+
       @tab_space = '..'
     end
 
-    def register_command(command_name, syntax_string = nil, &block)
+    def register_command(command_name, syntax_string = nil, command_help: nil, argument_help: nil, &block)
       syntax_parse_data = CliBuilder::Syntax::Parser.new(syntax_string).parse
-      @commands[command_name.to_sym] = CommandData.new(syntax_parse_data, (lambda &block))
+      help_data = CliBuilder::CommandData::HelpData.new(command_help, argument_help)
+
+      @commands[command_name.to_sym] = CliBuilder::CommandData.new(syntax_parse_data, help_data, (lambda &block))
     end
 
     def register_error_handler(&block)
       @error_handler = block
+    end
+
+    def register_help_handler(&block)
+      @help_handler = (lambda &block)
     end
 
     def run
@@ -240,6 +314,8 @@ module CliBuilder
 
         if user_input == @exit_string
           exit_prompt!
+        elsif @help_string && user_input == @help_string
+          call_help_handler
         else
           parsed_input = parse_input(user_input)
 
@@ -290,6 +366,39 @@ module CliBuilder
     end
 
     private
+
+    # Return a nested hash that represents the help text per command and
+    # per argument of that command. Imagine we had a command defined
+    # like 'command1 <FOO foo>', then the returned hash would look
+    # something like this:
+    # {
+    #   command1: {
+    #     help_text: 'This is command1's help text',
+    #     argument_string: '<FOO foo>'
+    #     arguments: {
+    #       foo: {
+    #         help_text: 'This is foo's help text'
+    #       }
+    #     }
+    #   }
+    # }
+    def commands_help_map
+      @commands.each_with_object({}) do |(command_name, command_data), command_hash|
+        command_hash[command_name] = {
+          help_text: command_data.help_text,
+          argument_string: command_data.argument_string,
+          arguments: command_data.arguments.each_with_object({}) do |argument, argument_hash|
+            argument_hash[argument.value_name] = {
+              help_text: command_data.argument_help_text_lookup(argument)
+            }
+          end
+        }
+      end
+    end
+
+    def call_help_handler
+      @help_handler.call(commands_help_map)
+    end
 
     def parse_input(input_string)
       match_data = /\A(\S+)( (.*))?\z/.match(input_string)
