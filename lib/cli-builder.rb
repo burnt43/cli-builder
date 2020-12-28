@@ -274,9 +274,14 @@ module CliBuilder
       @help_handler = ->(command_help_map) {
         tab_space = '  '
         command_help_map.each do |command_name, command_help_data|
-          printf("%-15s %-30s %s\n", command_name, command_help_data[:argument_string], command_help_data[:help_text])
+          printf("\033[0;32m%-15s\033[0;0m %-30s\n", command_name, command_help_data[:argument_string])
+
+          if command_help_data[:help_text]
+            printf("#{tab_space}%s\n", command_help_data[:help_text])
+          end
+
           command_help_data[:arguments].each do |argument_name, argument_help_data|
-            printf("#{tab_space}%-15s %s\n", argument_name, argument_help_data[:help_text])
+            printf("#{tab_space*2}\033[0;33m%-15s\033[0;0m %s\n", argument_name, argument_help_data[:help_text])
           end
         end
       }
