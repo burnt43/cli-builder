@@ -337,14 +337,22 @@ module CliBuilder
       end
     end
 
-    def yes_no_prompt(message=nil, &block)
+    def yes_no_prompt(message=nil, execute_only_on_yes: true, &block)
       print "#{@tab_space}#{message}(Y/n) > "
       user_input = gets.chomp
 
       if user_input == 'Y' || user_input == 'y'
-        block.call(true)
+        if execute_only_on_yes
+          block.call
+        else
+          block.call(true)
+        end
       else
-        block.call(false)
+        if execute_only_on_yes
+          # NoOp
+        else
+          block.call(false)
+        end
       end
     end
 
