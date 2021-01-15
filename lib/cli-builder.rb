@@ -306,12 +306,12 @@ module CliBuilder
       @help_handler = (lambda &block)
     end
 
-    # Just run 1 command directly.
+    # Parse and attempt to run a command directly without the REPL.
     def run_command(user_input)
       handle_user_input(user_input)
     end
 
-    # Run the interactive CLI.
+    # Run the REPL.
     def run
       if @greeting_string
         puts @greeting_string

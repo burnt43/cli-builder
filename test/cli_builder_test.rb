@@ -242,5 +242,30 @@ class CliBuilderTest < Minitest::Test
   end
 
   def test_run_command
+    local_var_01 = 0
+
+    prompt = CliBuilder::Prompt.new
+    prompt.register_command(:command1) do |_|
+      local_var_01 = 1
+    end
+
+    assert_equal(0, local_var_01)
+    prompt.run_command('command1')
+    assert_equal(1, local_var_01)
+  end
+
+  def test_yes_no_prompt_force_yes_option
+    local_var_01 = 0
+
+    prompt = CliBuilder::Prompt.new
+    prompt.register_command(:command1) do |_|
+      prompt.yes_no_prompt('foo', force_yes: true) do
+        local_var_01 = 2
+      end
+    end
+
+    assert_equal(0, local_var_01)
+    prompt.run_command('command1')
+    assert_equal(2, local_var_01)
   end
 end
