@@ -306,6 +306,12 @@ module CliBuilder
       @help_handler = (lambda &block)
     end
 
+    # Just run 1 command directly.
+    def run_command(user_input)
+      handle_user_input(user_input)
+    end
+
+    # Run the interactive CLI.
     def run
       if @greeting_string
         puts @greeting_string
@@ -316,42 +322,47 @@ module CliBuilder
 
         print "#{@prompt_string} "
         user_input = gets.chomp
-
-        if user_input == @exit_string
-          exit_prompt!
-        elsif @help_string && user_input == @help_string
-          call_help_handler
-        else
-          parsed_input = parse_input(user_input)
-
-          if parsed_input.error?
-            @error_handler.call(parsed_input)
-          else
-            if (command_data = @commands[parsed_input.command])
-              command_data.callback.call(parsed_input)
-            else
-              # noop?
-            end
-          end
-        end
+        handle_user_input(user_input)
       end
     end
 
-    def yes_no_prompt(message=nil, execute_only_on_yes: true, &block)
-      print "#{@tab_space}#{message}(Y/n) > "
-      user_input = gets.chomp
+    def yes_no_prompt(
+      message=nil,
+      execute_only_on_yes: true,
+      force_yes: false,
+      &block
+    )
 
-      if user_input == 'Y' || user_input == 'y'
+      if force_yes
         if execute_only_on_yes
           block.call
         else
           block.call(true)
         end
       else
-        if execute_only_on_yes
-          # NoOp
+        # get user input unless this prompt is being forced as yes,
+        # then we don't need any feedback from the user.
+        print "#{@tab_space}#{message}(Y/n) > "
+        user_input = gets.chomp
+
+        # check for recognized characters to interpret as a 'Yes'.
+        if user_input == 'Y' || user_input == 'y'
+          if execute_only_on_yes
+            # call block with no arg because the user chose 'Yes' and we're
+            # only calling block on yeses.
+            block.call
+          else
+            # call given block with true since the user chose 'Yes'
+            block.call(true)
+          end
         else
-          block.call(false)
+          if execute_only_on_yes
+            # do not call the given block, because the user chose 'No' and
+            # we are only calling the block on yeses.
+          else
+            # call given block with false since the user chose 'No'
+            block.call(false)
+          end
         end
       end
     end
@@ -379,6 +390,26 @@ module CliBuilder
     end
 
     private
+
+    def handle_user_input(user_input)
+      if user_input == @exit_string
+        exit_prompt!
+      elsif @help_string && user_input == @help_string
+        call_help_handler
+      else
+        parsed_input = parse_input(user_input)
+
+        if parsed_input.error?
+          @error_handler.call(parsed_input)
+        else
+          if (command_data = @commands[parsed_input.command])
+            command_data.callback.call(parsed_input)
+          else
+            # noop?
+          end
+        end
+      end
+    end
 
     # Return a nested hash that represents the help text per command and
     # per argument of that command. Imagine we had a command defined

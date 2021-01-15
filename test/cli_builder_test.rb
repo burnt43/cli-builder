@@ -240,4 +240,7 @@ class CliBuilderTest < Minitest::Test
     assert_instance_of(CliBuilder::Input::Parse::Result, result)
     assert_empty(result.options)
   end
+
+  def test_run_command
+  end
 end
