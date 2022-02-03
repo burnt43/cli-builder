@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'cli-builder'
-  s.version     = '0.0.11'
+  s.version     = '1.0.0'
   s.summary     = 'simplifies making clis'
   s.description = 'make clis'
   s.authors     = ['James Carson']
