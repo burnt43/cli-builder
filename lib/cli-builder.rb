@@ -309,8 +309,10 @@ module CliBuilder
           command_help_data[:arguments].each do |argument_name, argument_help_data|
             printf("#{tab_space}\033[0;33m%-15s\033[0;0m\n", argument_name)
 
-            argument_help_data[:help_text].chunks_of_size(max_width).each do |help_text_chunk|
-              printf("#{tab_space*2}%s\n", help_text_chunk)
+            if argument_help_data[:help_text]
+              argument_help_data[:help_text].chunks_of_size(max_width).each do |help_text_chunk|
+                printf("#{tab_space*2}%s\n", help_text_chunk)
+              end
             end
           end
         end
