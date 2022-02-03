@@ -1,5 +1,23 @@
 require 'hashie'
 
+class String
+  def chunks_of_size(n)
+    chunk_number = 0
+    [].tap do |a|
+      loop {
+        lower = chunk_number * n
+        upper = ((chunk_number + 1) * n) - 1
+
+        substring = self[lower..upper]
+        break unless substring
+
+        a.push(substring)
+        chunk_number += 1
+      }
+    end
+  end
+end
+
 module CliBuilder
   module Success
     def error?
@@ -271,17 +289,29 @@ module CliBuilder
       @error_handler = ->(error) {
         puts "an error occurred: #{error}"
       }
-      @help_handler = ->(command_help_map) {
-        tab_space = '  '
+      @help_handler = ->(command_help_map, help_args=nil) {
+        max_width = 80
+        tab_space = '    '
         command_help_map.each do |command_name, command_help_data|
-          printf("\033[0;32m%-15s\033[0;0m %-30s\n", command_name, command_help_data[:argument_string])
+          if help_args
+            next unless command_name.to_s.include?(help_args)
+          end
+
+          printf("\033[0;32m%-15s\033[0;0m\n", command_name)
+          printf("#{tab_space}%s\n", command_help_data[:argument_string])
 
           if command_help_data[:help_text]
-            printf("#{tab_space}%s\n", command_help_data[:help_text])
+            command_help_data[:help_text].chunks_of_size(max_width).each do |help_text_chunk|
+              printf("#{tab_space*2}%s\n", help_text_chunk)
+            end
           end
 
           command_help_data[:arguments].each do |argument_name, argument_help_data|
-            printf("#{tab_space*2}\033[0;33m%-15s\033[0;0m %s\n", argument_name, argument_help_data[:help_text])
+            printf("#{tab_space}\033[0;33m%-15s\033[0;0m\n", argument_name)
+
+            argument_help_data[:help_text].chunks_of_size(max_width).each do |help_text_chunk|
+              printf("#{tab_space*2}%s\n", help_text_chunk)
+            end
           end
         end
       }
@@ -394,8 +424,13 @@ module CliBuilder
     def handle_user_input(user_input)
       if user_input == @exit_string
         exit_prompt!
-      elsif @help_string && user_input == @help_string
-        call_help_handler
+      elsif @help_string && user_input.start_with?(@help_string)
+        # If there is more input after the help_string, consider it as args for
+        # the help handler.
+        split_user_input = user_input.split
+        help_args = split_user_input[1]
+
+        call_help_handler(help_args)
       else
         parsed_input = parse_input(user_input)
 
@@ -440,8 +475,8 @@ module CliBuilder
       end
     end
 
-    def call_help_handler
-      @help_handler.call(commands_help_map)
+    def call_help_handler(help_args=nil)
+      @help_handler.call(commands_help_map, help_args)
     end
 
     def parse_input(input_string)
